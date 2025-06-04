@@ -8,8 +8,8 @@ Flex Gateway on ACA Informal Guide
   - [Prerequisites](#prerequisites)
   - [Terminology](#terminology)
 - [Running Flex Gateway on Azure Container Apps](#running-flex-gateway-on-azure-container-apps)
-  - [Step 1 - Register Flex Gateway Instance](#step-1---register-flex-gateway-instance)
-  - [Step 2 - Create Azure Resources](#step-2---create-azure-resources)
+  - [Part 1 - Register Flex Gateway Instance](#part-1---register-flex-gateway-instance)
+  - [Part 2 - Create Azure Resources](#part-2---create-azure-resources)
 - [Conclusion](#conclusion)
 
 <p>&nbsp;</p>
@@ -48,6 +48,9 @@ Furthermore, this guide leverages shell variables whenever possible to store reu
 
 - You must have sufficient privileges in your Azure account to create and configure services and resources, including but not limited to resource group, container apps environment, and container.
 
+> [!TIP]
+> The [Tutorial: Deploy your first container app](https://learn.microsoft.com/en-us/azure/container-apps/tutorial-deploy-first-app-cli?tabs=bash) covers several of these prerequisites if you are new to the Azure CLI or unfamiliar with them.
+
 ## Terminology
 
 Before proceeding, it is essential to understand the following terminology used in the context of this document.
@@ -61,14 +64,14 @@ Before proceeding, it is essential to understand the following terminology used 
 
 Running Anypoint Flex Gateway on Azure Container Apps is relatively straightforward. There are a few minor gotchas, but nothing complex.
 
-- In step 1, you register the Flex Gateway instance.
-- In step 2, you create the Azure resources to run a single Flex Gateway replica, namely:
-  - First, although optional, you should create an Azure resource group to hold all resources related to Flex Gateway.
+- In part 1, you register the Flex Gateway instance.
+- In part 2, you create the Azure resources to run a single Flex Gateway replica:
+  - First, you create an Azure resource group to hold all resources related to Flex Gateway. 
   - Then, you create a container apps environment, "a secure boundary around one or more container apps and jobs" [1].
-  - Next, you create a YAML file to describe how to configure the container app for Flex Gateway. This step is unavoidable, as the Azure CLI does not support all the required configurations necessary to run Flex Gateway.
+  - Next, you create a YAML file to describe how to configure and run the container app for Flex Gateway. This step is unavoidable, as the Azure CLI does not support all the required configurations necessary to run Flex Gateway. You can find more information in section **2.4 - Create Flex Gateway YAML File**, below. 
   - Finally, you create the Flex Gateway container app.
 
-## Step 1 - Register Flex Gateway Instance
+## Part 1 - Register Flex Gateway Instance
 
 The easiest approach is to follow the high-level process ***Add a Self-Managed Flex Gateway*** described in **Anypoint Runtime Manager** because it prepopulates values that simplify the efforts significantly. In this guide, however, you only need to complete steps 1 (***Pull the image***) and 2 (***Register your gateway***) as if adding a Flex Gateway instance on Docker to generate the registration file. Before you begin, it is crucial to understand that a Flex Gateway instance is tied to:
 
@@ -113,15 +116,15 @@ Step 2 (***Register your gateway***) of the **Anypoint Runtime Manager** generic
 
 - Optionally, paste this command to a text editor to make any necessary changes. Do not forget to replace the `<gateway-name>` placeholder with the name of your instance. The generic command for step 2 is pasted here for convenience.
 
-```shell
-docker run --rm --entrypoint flexctl -u $UID \
-  -v "$(pwd)":/registration mulesoft/flex-gateway \
-  registration create --organization=<organization-id> \
-  --token=<registration-token> \
-  --output-directory=/registration \
-  --connected=true \
-  <gateway-name>
-```
+  ```shell
+  docker run --rm --entrypoint flexctl -u $UID \
+    -v "$(pwd)":/registration mulesoft/flex-gateway \
+    registration create --organization=<organization-id> \
+    --token=<registration-token> \
+    --output-directory=/registration \
+    --connected=true \
+    <gateway-name>
+  ```
 
 > [!TIP]
 > Adding the flag `--rm` before the flag `--entrypoint` disposes of the container automatically once the registration completes, as it is no longer required. Without this flag, the Docker container runs, the process completes, the container stops, and it remains on the system until you delete it, which you often forget to do.
@@ -137,25 +140,95 @@ The registration command creates a file named `registration.yaml` in the current
 > 
 > Although optional, you could rename the registration file to reflect the name of the Flex Gateway instance. A suggested naming convention is `registration-<gateway-name>.yaml` (e.g., `registration-sm-flex-demo-dev-01.yaml`). 
 
+## Part 2 - Create Azure Resources
+
+Feel free to review the [Tutorial: Deploy your first container app](https://learn.microsoft.com/en-us/azure/container-apps/tutorial-deploy-first-app-cli?tabs=bash) before proceeding, as this section follows it loosely. 
+
+### 2.1 - Set Environment Variables
+
+As mentioned, this guide leverages shell variables whenever possible to store reusable information and eliminate the need for editing commands included in this guide.
+
+- Copy the following to a text editor and edit the placeholders, replacing them with the values specific to your environment.
+
+  ```shell
+  RESOURCE_GROUP="<RESOURCE_GROUP>"
+  LOCATION="<LOCATION>"
+  ACA_ENVIRONMENT="<CONTAINER_APPS_ENVIRONMENT>"
+  CONTAINER_APP_NAME="<CONTAINER_APP_NAME>"
+  CONTAINER_APP_YAML_FILE="<CONTAINER_APP_YAML_FILE>"
+  ```
+
+  - `RESOURCE_GROUP` is the name of the Azure resource group to create - e.g., `"ACA-Flex-GW-Resource-Group"`.
+  - `LOCATION` is the Azure region where you want to create all the Azure resources - e.g., `"eastus"`.
+  - `ACA_ENVIRONMENT` is the name of the Azure container apps environment to create - e.g., `"ACA-Flex-GW-Environment"`. 
+  - `CONTAINER_APP_NAME` is the name of the Flex Gateway container app - e.g., `"aca-flex-gw-app"`. 
+  - `CONTAINER_APP_YAML_FILE` is the name of the YAML file that describes how to configure and run the container app for Flex Gateway - e.g., `"ACA-Flex-GW-App-Config.yaml"`. 
+
+  > [!IMPORTANT]
+  > The container app name must consist of lowercase alphanumeric characters and dashes ('-') only. It must start with a letter and end with an alphanumeric character and cannot include double dashes ('--'). The length must be between 2 and 32 characters inclusive.
+
+- Paste the variable definitions into a terminal (Linux or Mac) and execute the implied shell commands.
+
+  <img src="assets/images/flex-on-aca-2-1-01-env-variables.png" style="width:4.5in;height:0.9in"/>
+
+### 2.2 - Create Azure Resource Group
+
+- Resuming from the previous step, copy and execute the following Azure CLI command to create an Azure resource group.
+
+  The resource group holds all resources related to deploying and running your Flex Gateway replicas in Azure Container Apps.
+
+  ```shell
+  az group create \
+    --name $RESOURCE_GROUP \
+    --location "$LOCATION"
+  ```
+
+  <img src="assets/images/flex-on-aca-2-2-01-create-resource-group.png" style="width:4.5in;height:1.6in"/>
+
+### 2.3 - Create Container Apps Environment
+
+- Resuming from the previous step, copy and execute the following Azure CLI command to create an Azure Container Apps environment. 
+
+  As defined in the Azure Container Apps documentation, "*a Container Apps environment is a secure boundary around one or more container apps and jobs*" [1].
+
+  ```shell
+  az containerapp env create \
+    --name $ACA_ENVIRONMENT \
+    --resource-group $RESOURCE_GROUP \
+    --location "$LOCATION"
+  ```
+
+  <img src="assets/images/flex-on-aca-2-3-01-create-container-apps-environment.png" style="width:4.5in;height:1.9in"/>
+
+### 2.4 - Create Flex Gateway YAML File
+
+In this step, you create a YAML file that specifies the required configuration to run a container app for Flex Gateway. This approach is necessary for two reasons. 
+
+1. As mentioned, this guide's current revision utilizes the `FLEX_CONFIG` environment variable to inject the Flex Gateway registration information (i.e., the content of Flex Gateway registration) and some additional configuration (i.e., runtime debug logs, readiness probe). The `FLEX_CONFIG` environment variable, like any other environment variable, is a name-value pair. More to the point, the value of the FLEX_CONFIG environment variable is a string, but Flex Gateway expects configuration information provided in YAML format. As such, you must escape the YAML configuration, generally resulting in a very long string of characters, including escaped characters.
+
+   The Azure CLI commands `az containerapp create` and `az containerapp up` accept the optional `--env-vars` parameter for specifying a list of environment variables for the container app. However, using the `--env-vars` parameter as part of a proof of concept was unsuccessful. It appears that the CLI stores the value of the `FLEX_CONFIG` environment variable in a way that prevents Flex Gateway from successfully parsing its YAML configuration. Using a YAML file that defines the required configuration to run a container app for Flex Gateway solves this first issue.
+
+2. This guide enables ingress for the Flex Gateway container app to expose the container app on the internet (or public web) and avoid creating an Azure Load Balancer, public IP address, or other Azure resources to enable incoming HTTP requests or TCP traffic [2]. As ingress is enabled, Azure Container Apps automatically adds default startup, liveness, and readiness probes. Please refer to the article [Health probes in Azure Container Apps](https://learn.microsoft.com/en-us/azure/container-apps/health-probes?tabs=yaml) in the **Azure Container Apps documentation** for more information.
+
+   This guide's current revision overrides the default probes, utilizing the Flex Gateway [Readiness Probe](https://docs.mulesoft.com/gateway/latest/flex-conn-readiness-liveness#configure-external-components) introduced in version 1.8.0. Unfortunately, the Azure CLI commands `az containerapp create` and `az containerapp up` do not accept any parameter for specifying startup, liveness, and readiness probes. Using a YAML file that defines the required configuration to run a container app for Flex Gateway also solves this issue.
 
 
-## Step 2 - Create Azure Resources
 
-### 2.1 - Create Azure Resource Group
+### 2.5 - Create the Flex Gateway Container App
 
+- Resuming from step **2.3 - Create Container Apps Environment**, copy and execute the following Azure CLI command to create the Flex Gateway Azure Container App. 
 
+  ```shell
+  az containerapp create \
+    --name $CONTAINER_APP_NAME \
+    --resource-group $RESOURCE_GROUP \
+    --yaml $CONTAINER_APP_YAML_FILE \
+    --output table
+  ```
 
-### 2.2 - Create Container Apps Environment
+  <img src="assets/images/flex-on-aca-2-5-01-create-flex-gw-container-app.png" style="width:4.5in;height:1.5in"/>
 
-
-
-### 2.3 - Create Flex Gateway YAML File
-
-
-
-### 2.4 - Create the Flex Gateway Container App
-
-
+Notice the underlined URL in the screen capture. This fully qualified domain name (FQDN) points to the Azure container app just created. In other words, this is the base URL for Flex Gateway.
 
 # Conclusion
 
@@ -164,4 +237,5 @@ This informal guide provided a suggested approach to establish a baseline or fou
 # References
 
 - 1 - https://learn.microsoft.com/en-us/azure/container-apps/environment
+- 2 - https://learn.microsoft.com/en-us/azure/container-apps/ingress-overview
 
