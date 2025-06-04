@@ -8,7 +8,8 @@ Flex Gateway on ACA Informal Guide
   - [Prerequisites](#prerequisites)
   - [Terminology](#terminology)
 - [Running Flex Gateway on Azure Container Apps](#running-flex-gateway-on-azure-container-apps)
-  - 
+  - [Step 1 - Register Flex Gateway Instance](#step-1---register-flex-gateway-instance)
+  - [Step 2 - Create Azure Resources](#step-2---create-azure-resources)
 - [Conclusion](#conclusion)
 
 <p>&nbsp;</p>
@@ -74,7 +75,7 @@ The easiest approach is to follow the high-level process ***Add a Self-Managed F
 1. An Anypoint organization or business group, and
 2. An Anypoint environment (e.g., sandbox, production).
 
-<img src="assets/images/flex-on-aca-1-01-runtime-manager-add-flex.png" style="width:6.5in;height:5.2in"/>
+<img src="assets/images/flex-on-aca-1-0-01-runtime-manager-add-flex.png" style="width:6.5in;height:5.2in"/>
 
 In the screen capture above, the **Demo** business group and the **Dev** environment are selected, and the prepopulated values reflect those selections.
 
@@ -110,7 +111,17 @@ Step 2 (***Register your gateway***) of the **Anypoint Runtime Manager** generic
 
   <img src="assets/images/flex-on-aca-1-2-01-register-gateway-command.png" style="width:6.5in;height:2.8in"/>
 
-- Optionally, paste this command to a text editor to make any necessary changes. Do not forget to replace the `<gateway-name>` placeholder with the name of your instance.
+- Optionally, paste this command to a text editor to make any necessary changes. Do not forget to replace the `<gateway-name>` placeholder with the name of your instance. The generic command for step 2 is pasted here for convenience.
+
+```shell
+docker run --rm --entrypoint flexctl -u $UID \
+  -v "$(pwd)":/registration mulesoft/flex-gateway \
+  registration create --organization=<organization-id> \
+  --token=<registration-token> \
+  --output-directory=/registration \
+  --connected=true \
+  <gateway-name>
+```
 
 > [!TIP]
 > Adding the flag `--rm` before the flag `--entrypoint` disposes of the container automatically once the registration completes, as it is no longer required. Without this flag, the Docker container runs, the process completes, the container stops, and it remains on the system until you delete it, which you often forget to do.
@@ -120,6 +131,11 @@ Step 2 (***Register your gateway***) of the **Anypoint Runtime Manager** generic
   <img src="assets/images/flex-on-aca-1-2-02-register-gateway-execution.png" style="width:4.5in;height:1.3in"/>
 
 The registration command creates a file named `registration.yaml` in the current directory on your computer. This registration file is specific to the Flex Gateway instance you just registered. As a reminder, it is tied to the selected 1) Anypoint organization or business group and 2) Anypoint environment.
+
+> [!TIP]
+> As a reminder, the content of the registration file is specific to the Flex Gateway instance you registered. Save it in a safe location for future reuse, as you will need it to start any new Flex Gateway replica.
+> 
+> Although optional, you could rename the registration file to reflect the name of the Flex Gateway instance. A suggested naming convention is `registration-<gateway-name>.yaml` (e.g., `registration-sm-flex-demo-dev-01.yaml`). 
 
 
 
