@@ -278,7 +278,7 @@ spec:
 ```
 
 > [!NOTE]
-> This repository's [resources](/resources) folder contains a file named `FLEX_CONFIG.yaml`, which is a complete exemple of a Flex Gateway registration file merged with 1) the debug logs configuration example, and 2) the readiness API configuration. 
+> This repository's [resources](/resources) folder contains a file named `FLEX_CONFIG.yaml`, which is a complete example of a Flex Gateway registration file merged with 1) the debug logs configuration example, and 2) the readiness API configuration. 
 
 ### 1.3 - Escape the Flex Gateway YAML Configuration
 
