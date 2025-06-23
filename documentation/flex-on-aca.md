@@ -181,7 +181,7 @@ The registration command creates a file named `registration.yaml` in the current
 
 ### 1.2 - Merge Registration and Configuration Files
 
-In this step, you copy your Flex Gateway registration file to a new file and append two additional configuration files, resulting in a single, larger YAML configuration file. In this step, you copy your Flex Gateway registration file to a new file and append two additional configuration files, resulting in a single, larger YAML configuration file. The goal is to ultimately create the value of the FLEX_CONFIG environment variable to inject the registration and configuration files when starting the Flex Gateway instance.
+In this step, you copy your Flex Gateway registration file to a new file and append two additional configuration files, resulting in a single, larger YAML configuration file. The goal is to ultimately create the value of the FLEX_CONFIG environment variable to inject the registration and configuration files when starting the Flex Gateway instance.
 
 The first file to append sets the Flex Gateway runtime log level to debug for more verbose runtime logs. It is optional but invaluable to troubleshoot any issues when deploying and running Flex Gateway on Azure Container Apps for the first time. The article [Troubleshooting Self-Managed Gateway with Debug Logs](https://docs.mulesoft.com/gateway/latest/flex-troubleshoot-debug-logs#debug-logs-configuration-example) provides the following YAML configuration example, which is used in this guide.
 
